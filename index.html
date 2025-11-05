@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Universal Map Redirect</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#f7fafc; color:#111827; }
+    .card { background:#fff; padding:20px 18px; border-radius:10px; box-shadow:0 6px 24px rgba(15,23,42,0.08); width:100%; max-width:520px; text-align:center; }
+    p { margin:0 0 12px; }
+    code { background:#f1f5f9; padding:4px 6px; border-radius:6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
+    .small { color:#6b7280; font-size:0.9rem; margin-top:10px; }
+    .btn { display:inline-block; padding:8px 12px; border-radius:6px; background:#2563eb; color:white; text-decoration:none; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="card" id="root">
+    <h2>Redirecting to map app…</h2>
+    <p id="desc">If you are not redirected automatically, <a id="openLink" href="#">open link</a>.</p>
+    <p class="small" id="info">This page will try to open the native map app on mobile devices.</p>
+  </div>
+
+  <script>
+  // redirect.js embedded (single file site)
+  (function () {
+    const params = new URLSearchParams(location.search);
+    const lat = params.get('lat');
+    const lng = params.get('lng');
+    const name = params.get('name') || ''; // optional label
+    const fallback = params.get('fallback') || ''; // optional fallback param
+
+    const root = document.getElementById('root');
+    const openLink = document.getElementById('openLink');
+    const desc = document.getElementById('desc');
+
+    if (!lat || !lng || isNaN(Number(lat)) || isNaN(Number(lng))) {
+      root.innerHTML = '<h2>Invalid coordinates</h2><p class="small">Link must include <code>?lat=&lt;latitude&gt;&amp;lng=&lt;longitude&gt;</code></p>';
+      return;
+    }
+
+    const coords = `${lat},${lng}`;
+    // Build various URIs
+    const appleMaps = `maps://?q=${coords}${name ? '&z=17' : ''}`;
+    const appleWeb = `https://maps.apple.com/?q=${coords}`;
+    const googleGeo = `geo:${coords}?q=${coords}`;
+    const googleWeb = `https://www.google.com/maps/search/?api=1&query=${coords}`;
+    const osmWeb = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
+
+    // Device detection (simple)
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isAndroid = /android/i.test(ua);
+
+    // Choose preferred link
+    let tryLink;
+    if (isIOS) {
+      tryLink = appleMaps; // Apple Maps scheme
+    } else if (isAndroid) {
+      tryLink = googleGeo; // geo: URI for Android
+    } else {
+      // desktop — open google maps web by default
+      tryLink = googleWeb;
+    }
+
+    // clickable fallback link text
+    openLink.href = fallback || googleWeb;
+    openLink.textContent = fallback ? 'Open fallback web link' : 'Open in browser';
+
+    // Attempt to open native app, then fallback after timeout
+    function attemptOpen(urlToOpen, webFallback) {
+      // set the visible fallback link to web fallback
+      openLink.href = webFallback;
+
+      // On iOS/Safari, using location.href on a timeout usually works for map schemes.
+      // On Android, geo: will open Maps app on Chrome.
+      try {
+        // Try direct navigation
+        window.location.href = urlToOpen;
+      } catch (e) {
+        // ignore
+      }
+
+      // As backup, after a short delay, open the web fallback
+      setTimeout(() => {
+        window.location.href = webFallback;
+      }, 1700);
+    }
+
+    // Run it
+    if (isIOS) {
+      attemptOpen(appleMaps, appleWeb);
+      desc.textContent = 'Attempting to open Apple Maps…';
+    } else if (isAndroid) {
+      attemptOpen(googleGeo, googleWeb);
+      desc.textContent = 'Attempting to open Google Maps…';
+    } else {
+      // desktop -> open Google maps immediately
+      window.location.href = googleWeb;
+      desc.textContent = 'Opening Google Maps in your browser…';
+    }
+  })();
+  </script>
+</body>
+</html>
