@@ -40,10 +40,16 @@
 
     const coords = `${lat},${lng}`;
     // Build various URIs
-    const appleMaps = `maps://?q=${coords}${name ? '&z=17' : ''}`;
-    const appleWeb = `https://maps.apple.com/?q=${coords}`;
-    const googleGeo = `geo:${coords}?q=${coords}`;
-    const googleWeb = `https://www.google.com/maps/search/?api=1&query=${coords}`;
+    // Apple Maps: q=Name (if available) or lat,lng. ll=lat,lng always provided for center.
+    const appleMaps = `maps://?q=${name ? encodeURIComponent(name) : coords}&ll=${coords}`;
+    
+    // Android (geo): geo:lat,lng?q=lat,lng(Name) or just q=lat,lng
+    const googleGeo = name 
+      ? `geo:${coords}?q=${coords}(${encodeURIComponent(name)})`
+      : `geo:${coords}?q=${coords}`;
+      
+    // Web Fallback
+    const googleWeb = `https://www.google.com/maps/search/?api=1&query=${name ? encodeURIComponent(name) : coords}`;
     const osmWeb = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
 
     // Device detection (simple)
