@@ -40,12 +40,19 @@
 
     const coords = `${lat},${lng}`;
     // Build various URIs
-    // Apple Maps: q=Name (if available) or lat,lng. ll=lat,lng always provided for center.
-    const appleMaps = `maps://?q=${name ? encodeURIComponent(name) : coords}&ll=${coords}`;
     
-    // Android (geo): geo:lat,lng?q=lat,lng(Name) or just q=lat,lng
+    // Apple Maps: 
+    // If we have a name, use 'sll' (Search Location) to find the actual POI.
+    // Otherwise, use 'll' to center the map on the coordinates.
+    const appleMaps = name 
+      ? `maps://?q=${encodeURIComponent(name)}&sll=${coords}`
+      : `maps://?q=${coords}&ll=${coords}`;
+    
+    // Android (geo): 
+    // If we have a name, search for it at the location (geo:lat,lng?q=Name).
+    // This attempts to open the Place Details card instead of a custom pin.
     const googleGeo = name 
-      ? `geo:${coords}?q=${coords}(${encodeURIComponent(name)})`
+      ? `geo:${coords}?q=${encodeURIComponent(name)}`
       : `geo:${coords}?q=${coords}`;
       
     // Web Fallback
