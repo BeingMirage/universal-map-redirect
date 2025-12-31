@@ -1,117 +1,140 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Universal Map Redirect</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#f7fafc; color:#111827; }
-    .card { background:#fff; padding:20px 18px; border-radius:10px; box-shadow:0 6px 24px rgba(15,23,42,0.08); width:100%; max-width:520px; text-align:center; }
-    p { margin:0 0 12px; }
-    code { background:#f1f5f9; padding:4px 6px; border-radius:6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
-    .small { color:#6b7280; font-size:0.9rem; margin-top:10px; }
-    .btn { display:inline-block; padding:8px 12px; border-radius:6px; background:#2563eb; color:white; text-decoration:none; margin-top:10px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Universal Map Redirect</title>
+
+<style>
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  margin:0;
+  background:#f7fafc;
+  color:#111827;
+}
+.card {
+  background:#fff;
+  padding:22px 20px;
+  border-radius:12px;
+  box-shadow:0 8px 28px rgba(15,23,42,.08);
+  max-width:520px;
+  width:100%;
+  text-align:center;
+}
+.btn {
+  display:inline-block;
+  margin-top:12px;
+  padding:10px 16px;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  text-decoration:none;
+  font-weight:600;
+}
+.small {
+  font-size:.9rem;
+  color:#6b7280;
+  margin-top:10px;
+}
+code {
+  background:#f1f5f9;
+  padding:4px 6px;
+  border-radius:6px;
+}
+</style>
 </head>
+
 <body>
-  <div class="card" id="root">
-    <h2>Redirecting to map app…</h2>
-    <p id="desc">If you are not redirected automatically, <a id="openLink" href="#">open link</a>.</p>
-    <p class="small" id="info">This page will try to open the native map app on mobile devices.</p>
-  </div>
+<div class="card" id="root">
+  <h2 id="title">Opening map…</h2>
+  <p id="desc">Preparing redirect</p>
+  <a id="action" class="btn" style="display:none">Open map</a>
+  <p class="small" id="info"></p>
+</div>
 
-  <script>
-  // redirect.js embedded (single file site)
-  (function () {
-    const params = new URLSearchParams(location.search);
-    const lat = params.get('lat');
-    const lng = params.get('lng');
-    const name = params.get('name') || ''; // optional label
-    const fallback = params.get('fallback') || ''; // optional fallback param
+<script>
+(function () {
+  const qs = new URLSearchParams(location.search);
+  const lat = qs.get('lat');
+  const lng = qs.get('lng');
+  const name = qs.get('name') || '';
 
-    const root = document.getElementById('root');
-    const openLink = document.getElementById('openLink');
-    const desc = document.getElementById('desc');
+  const title = document.getElementById('title');
+  const desc = document.getElementById('desc');
+  const action = document.getElementById('action');
+  const info = document.getElementById('info');
 
-    if (!lat || !lng || isNaN(Number(lat)) || isNaN(Number(lng))) {
-      root.innerHTML = '<h2>Invalid coordinates</h2><p class="small">Link must include <code>?lat=&lt;latitude&gt;&amp;lng=&lt;longitude&gt;</code></p>';
-      return;
-    }
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    title.textContent = 'Invalid link';
+    desc.innerHTML =
+      'Required parameters:<br><code>?lat=&lt;latitude&gt;&amp;lng=&lt;longitude&gt;</code>';
+    return;
+  }
 
-    const coords = `${lat},${lng}`;
-    // Build various URIs
-    
-    // Apple Maps: 
-    // If we have a name, use 'sll' (Search Location) to find the actual POI.
-    // Otherwise, use 'll' to center the map on the coordinates.
-    const appleMaps = name 
-      ? `maps://?q=${encodeURIComponent(name)}&sll=${coords}`
-      : `maps://?q=${coords}&ll=${coords}`;
-    
-    // Android (geo): 
-    // If we have a name, search for it at the location (geo:lat,lng?q=Name).
-    // This attempts to open the Place Details card instead of a custom pin.
-    const googleGeo = name 
-      ? `geo:${coords}?q=${encodeURIComponent(name)}`
-      : `geo:${coords}?q=${coords}`;
-      
-    // Web Fallback
-    const googleWeb = `https://www.google.com/maps/search/?api=1&query=${name ? encodeURIComponent(name) : coords}`;
-    const osmWeb = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
+  const coords = `${lat},${lng}`;
 
-    // Device detection (simple)
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
-    const isIOS = /iphone|ipad|ipod/i.test(ua);
-    const isAndroid = /android/i.test(ua);
+  /* ---------- URLs ---------- */
 
-    // Choose preferred link
-    let tryLink;
-    if (isIOS) {
-      tryLink = appleMaps; // Apple Maps scheme
-    } else if (isAndroid) {
-      tryLink = googleGeo; // geo: URI for Android
-    } else {
-      // desktop — open google maps web by default
-      tryLink = googleWeb;
-    }
+  // Apple Maps
+  const appleApp =
+    `maps://maps.apple.com/?ll=${coords}&q=${encodeURIComponent(name || coords)}`;
+  const appleWeb =
+    `https://maps.apple.com/?ll=${coords}&q=${encodeURIComponent(name || coords)}`;
 
-    // clickable fallback link text
-    openLink.href = fallback || googleWeb;
-    openLink.textContent = fallback ? 'Open fallback web link' : 'Open in browser';
+  // Google Maps
+  const googleApp =
+    `geo:${coords}?q=${encodeURIComponent(name || coords)}`;
+  const googleWeb =
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name || coords)}`;
 
-    // Attempt to open native app, then fallback after timeout
-    function attemptOpen(urlToOpen, webFallback) {
-      // set the visible fallback link to web fallback
-      openLink.href = webFallback;
+  /* ---------- Platform detection ---------- */
 
-      // On iOS/Safari, using location.href on a timeout usually works for map schemes.
-      // On Android, geo: will open Maps app on Chrome.
-      try {
-        // Try direct navigation
-        window.location.href = urlToOpen;
-      } catch (e) {
-        // ignore
-      }
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
 
-      // As backup, after a short delay, open the web fallback
+  /* ---------- Behavior ---------- */
+
+  if (isIOS) {
+    // iOS REQUIRES USER GESTURE
+    title.textContent = 'Open Apple Maps';
+    desc.textContent = 'Tap the button below to open the location';
+    action.style.display = 'inline-block';
+    action.textContent = 'Open Apple Maps';
+    action.href = appleApp;
+
+    action.onclick = () => {
+      window.location.href = appleApp;
       setTimeout(() => {
-        window.location.href = webFallback;
-      }, 1700);
-    }
+        window.location.href = appleWeb;
+      }, 1500);
+    };
 
-    // Run it
-    if (isIOS) {
-      attemptOpen(appleMaps, appleWeb);
-      desc.textContent = 'Attempting to open Apple Maps…';
-    } else if (isAndroid) {
-      attemptOpen(googleGeo, googleWeb);
-      desc.textContent = 'Attempting to open Google Maps…';
-    } else {
-      // desktop -> open Google maps immediately
-      window.location.href = appleWeb;
-      desc.textContent = 'Opening Apple Maps in your browser…';
-    }
-  })();
-  </script>
+    info.textContent = 'Apple iOS requires a tap to open apps.';
+  }
+
+  else if (isAndroid) {
+    title.textContent = 'Opening Google Maps…';
+    desc.textContent = 'Redirecting to Google Maps app';
+
+    window.location.href = googleApp;
+
+    setTimeout(() => {
+      window.location.href = googleWeb;
+    }, 1200);
+  }
+
+  else {
+    // Desktop
+    title.textContent = 'Opening map…';
+    desc.textContent = 'Redirecting to Google Maps';
+    window.location.href = googleWeb;
+  }
+})();
+</script>
 </body>
 </html>
