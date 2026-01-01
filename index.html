@@ -35,6 +35,9 @@ body {
   text-decoration:none;
   font-weight:600;
 }
+.btn.secondary {
+  background:#111827;
+}
 .small {
   font-size:.9rem;
   color:#6b7280;
@@ -45,6 +48,12 @@ code {
   padding:4px 6px;
   border-radius:6px;
 }
+.actions {
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
 </style>
 </head>
 
@@ -52,7 +61,12 @@ code {
 <div class="card" id="root">
   <h2 id="title">Opening map…</h2>
   <p id="desc">Preparing redirect</p>
-  <a id="action" class="btn" style="display:none">Open map</a>
+
+  <div class="actions" id="actions" style="display:none">
+    <a id="googleBtn" class="btn">Open Google Maps</a>
+    <a id="appleBtn" class="btn secondary">Open Apple Maps</a>
+  </div>
+
   <p class="small" id="info"></p>
 </div>
 
@@ -65,8 +79,10 @@ code {
 
   const title = document.getElementById('title');
   const desc = document.getElementById('desc');
-  const action = document.getElementById('action');
   const info = document.getElementById('info');
+  const actions = document.getElementById('actions');
+  const googleBtn = document.getElementById('googleBtn');
+  const appleBtn = document.getElementById('appleBtn');
 
   if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
     title.textContent = 'Invalid link';
@@ -76,63 +92,63 @@ code {
   }
 
   const coords = `${lat},${lng}`;
+  const label = encodeURIComponent(name || coords);
 
-  /* ---------- URLs ---------- */
+  /* URLs */
+  const appleApp = `maps://maps.apple.com/?ll=${coords}&q=${label}`;
+  const appleWeb = `https://maps.apple.com/?ll=${coords}&q=${label}`;
+  const googleApp = `geo:${coords}?q=${label}`;
+  const googleWeb = `https://www.google.com/maps/search/?api=1&query=${label}`;
 
-  // Apple Maps
-  const appleApp =
-    `maps://maps.apple.com/?ll=${coords}&q=${encodeURIComponent(name || coords)}`;
-  const appleWeb =
-    `https://maps.apple.com/?ll=${coords}&q=${encodeURIComponent(name || coords)}`;
-
-  // Google Maps
-  const googleApp =
-    `geo:${coords}?q=${encodeURIComponent(name || coords)}`;
-  const googleWeb =
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name || coords)}`;
-
-  /* ---------- Platform detection ---------- */
-
+  /* Platform detection */
   const ua = navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(ua);
   const isAndroid = /android/.test(ua);
 
-  /* ---------- Behavior ---------- */
-
+  /* iOS */
   if (isIOS) {
-    // iOS REQUIRES USER GESTURE
     title.textContent = 'Open Apple Maps';
-    desc.textContent = 'Tap the button below to open the location';
-    action.style.display = 'inline-block';
-    action.textContent = 'Open Apple Maps';
-    action.href = appleApp;
+    desc.textContent = 'Tap the button to open the location';
 
-    action.onclick = () => {
+    actions.style.display = 'flex';
+    googleBtn.style.display = 'none';
+    appleBtn.textContent = 'Open Apple Maps';
+    appleBtn.href = appleApp;
+
+    appleBtn.onclick = () => {
       window.location.href = appleApp;
       setTimeout(() => {
         window.location.href = appleWeb;
       }, 1500);
     };
 
-    info.textContent = 'Apple iOS requires a tap to open apps.';
+    info.textContent = 'iOS requires a user gesture to open map apps.';
   }
 
+  /* Android */
   else if (isAndroid) {
     title.textContent = 'Opening Google Maps…';
     desc.textContent = 'Redirecting to Google Maps app';
 
     window.location.href = googleApp;
-
     setTimeout(() => {
       window.location.href = googleWeb;
     }, 1200);
   }
 
+  /* Desktop / Windows / macOS / Linux */
   else {
-    // Desktop
-    title.textContent = 'Opening map…';
-    desc.textContent = 'Redirecting to Google Maps';
-    window.location.href = googleWeb;
+    title.textContent = 'Choose map provider';
+    desc.textContent = 'Select a map service to test translation accuracy';
+
+    actions.style.display = 'flex';
+
+    googleBtn.href = googleWeb;
+    appleBtn.href = appleWeb;
+
+    info.innerHTML =
+      `Coordinates: <code>${coords}</code>` +
+      (name ? ` • Label: <code>${name}</code>` : '');
   }
 })();
 </script>
